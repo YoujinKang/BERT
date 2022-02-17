@@ -1,0 +1,7 @@
+torch==1.9.0
+transformers == 4.15.0
+datasets == 1.18.0
+tqdm==4.62.3
+easydict==1.9
+tensorboard==2.7.0
+sentencepiece==0.1.83
