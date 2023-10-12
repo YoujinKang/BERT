@@ -13,13 +13,11 @@ class BertMLMHead(nn.Module):
         self._init_weight()
 
     def _init_weight(self):
-        nn.init.kaiming_uniform_(self.dense.weight, mode='fan_out', nonlinearity='relu')
-        # self.dense.weight.data.uniform_(mean=0.0, std=0.02)
+        self.dense.weight.data.uniform_(mean=0.0, std=0.02)
         self.dense.bias.data.zero_()
         self.layer_norm.bias.data.zero_()
         self.layer_norm.weight.data.fill_(1.0)
-        nn.init.kaiming_uniform_(self.decoder.weight, mode='fan_out', nonlinearity='relu')
-        # self.decoder.weight.data.uniform_(mean=0.0, std=0.02)
+        self.decoder.weight.data.uniform_(mean=0.0, std=0.02)
         self.decoder.bias.data.zero_()
 
     def forward(self, h_states):
@@ -39,8 +37,7 @@ class BertNSPHead(nn.Module):
         self._init_weight()
 
     def _init_weight(self):
-        nn.init.kaiming_uniform_(self.seq_relation.weight, mode='fan_out', nonlinearity='relu')
-        # self.seq_relation.weight.data.uniform_(mean=0.0, std=0.02)
+        self.seq_relation.weight.data.uniform_(mean=0.0, std=0.02)
         self.seq_relation.bias.data.zero_()
 
     def forward(self, pooled_output):

@@ -18,7 +18,6 @@ from LanguageModel import BertPreTrainingHead
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_file", type=str, default='config/config.json')
-    parser.add_argument("--vocab_model", type=str, default='spm.model')
     parser.add_argument("--output_dir", type=str, default='saved_model')
     parser.add_argument("--device", type=str, default='gpu')
     args = parser.parse_args()
@@ -29,7 +28,7 @@ if __name__ == '__main__':
     with open(args.config_file) as f:
         config = json.load(f)
 
-    log_dir = args.output_dir + '/pretraining'
+    log_dir = args.output_dir + '/pretraining3'
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
     tb_writer = SummaryWriter(log_dir)
@@ -38,7 +37,6 @@ if __name__ == '__main__':
 
     bookcorpus = load_dataset('bookcorpus', split='train')['text'].copy()
     wikipedia = load_dataset('wikipedia', '20200501.en', split='train')['text'].copy()
-    # train using huggingface tokenizer
     train = CustomDataset(bookcorpus+wikipedia, config['model']['max_position_embeddings'])
     
     train_loader = DataLoader(train, batch_size=config['train']['batch_size'], shuffle=True)
@@ -54,10 +52,17 @@ if __name__ == '__main__':
     optimizer = optim.Adam(pretraining_head.parameters(), lr=config['train']['lr'], betas=[config['train']['beta1'], config['train']['beta2']], weight_decay=config['train']['weight_decay'])
     criterion = nn.CrossEntropyLoss(ignore_index=-100).to(device)
 
+    # ckpt = torch.load(f'{log_dir}/model.ckpt', map_location=device)
+    # pretraining_head.load_state_dict(ckpt['pt_model_state_dict'])
+    # optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+    
+
     max_epoch = config['train']['max_epoch']
     total_loss = 0
     stack = 0
     step_num = 0
+    # step_num = ckpt['step_num']
+    print("Step_num: step_num")
     total_s_time = time.time()
     lowest_loss = 10000
 
@@ -93,16 +98,19 @@ if __name__ == '__main__':
                 optimizer.step()
                 optimizer.zero_grad()
 
-                tb_writer.add_scalar('loss/step', total_loss, step_num)
-                tb_writer.add_scalar('lr/step', optimizer.param_groups[0]['lr'], step_num)
-                tb_writer.flush()
 
             if stack % config['train']['eval_interval'] == 1:
                 elapsed = (time.time() - s_time)/60
                 print("Step: %d | Loss: %f | Time:  %f [min]" %(step_num, total_loss, elapsed))
+                
+                tb_writer.add_scalar('loss/step', total_loss, step_num)
+                tb_writer.add_scalar('lr/step', optimizer.param_groups[0]['lr'], step_num)
+                tb_writer.flush()
+                
                 s_time = time.time()
                 total_loss = 0
-                torch.save({"model_state_dict": pretraining_head.state_dict(),
+                torch.save({"pt_model_state_dict": pretraining_head.state_dict(),
+                            "bert_model_state_dict": pretraining_head.model.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
                             "step_num": step_num}, log_dir+f"/model.ckpt")
 
@@ -110,13 +118,15 @@ if __name__ == '__main__':
                 continue
         
         print(f"Time passed from training: {(time.time()-total_s_time)/3600} [h]")
-        torch.save({"model_state_dict": pretraining_head.state_dict(),
+        torch.save({"pt_model_state_dict": pretraining_head.state_dict(),
+                    "bert_model_state_dict": pretraining_head.model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "step_num": step_num}, log_dir+f"/model_{epoch+1}.ckpt")
         print("Model is saved!")
 
     print(f"Time passed from training: {(time.time()-total_s_time)/3600} [h]")
-    torch.save({"model_state_dict": pretraining_head.state_dict(),
+    torch.save({"pt_model_state_dict": pretraining_head.state_dict(),
+                "bert_model_state_dict": pretraining_head.model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "step_num": step_num}, log_dir+f"/model_final.ckpt")
     print("Final Model is saved!")

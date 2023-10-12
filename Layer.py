@@ -18,14 +18,11 @@ class BertEmbedding(nn.Module):
         self.register_buffer("token_type_ids", torch.zeros(self.position_ids.size(), dtype=torch.long), persistent=False, )
 
     def _init_weight(self, pad_idx=0):
-        nn.init.kaiming_uniform_(self.word_embeddings.weight, mode='fan_out', nonlinearity='relu')
-        # self.word_embeddings.weight.data.normal_(mean=0.0, std=0.02)
+        nn.init.normal_(self.word_embeddings.weight,mean=0.0, std=0.02)
         self.word_embeddings.weight.data[pad_idx].zero_()
-        nn.init.kaiming_uniform_(self.position_embeddings.weight, mode='fan_out', nonlinearity='relu')
-        # self.position_embeddings.weight.data.normal_(mean=0.0, std=0.02)
+        nn.init.normal_(self.position_embeddings.weight,mean=0.0, std=0.02)
         self.position_embeddings.weight.data[pad_idx].zero_()
-        nn.init.kaiming_uniform_(self.token_type_embeddings.weight, mode='fan_out', nonlinearity='relu')
-        # self.token_type_embeddings.weight.data.normal_(mean=0.0, std=0.02)
+        nn.init.normal_(self.token_type_embeddings.weight,mean=0.0, std=0.02)
         self.token_type_embeddings.weight.data[pad_idx].zero_()
         self.layer_norm.weight.data.fill_(1.0)
         self.layer_norm.bias.data.zero_()
@@ -61,14 +58,11 @@ class BertSelfAttention(nn.Module):
         self._init_weight()
 
     def _init_weight(self):
-        nn.init.kaiming_uniform_(self.query.weight, mode='fan_out', nonlinearity='relu')
-        # self.query.weight.data.normal_(mean=0.0, std=0.02)
+        nn.init.normal_(self.query.weight,mean=0.0, std=0.02)
         self.query.bias.data.zero_()
-        nn.init.kaiming_uniform_(self.key.weight, mode='fan_out', nonlinearity='relu')
-        # self.key.weight.data.normal_(mean=0.0, std=0.02)
+        nn.init.normal_(self.key.weight,mean=0.0, std=0.02)
         self.key.bias.data.zero_()
-        nn.init.kaiming_uniform_(self.value.weight, mode='fan_out', nonlinearity='relu')
-        # self.value.weight.data.normal_(mean=0.0, std=0.02)
+        nn.init.normal_(self.value.weight,mean=0.0, std=0.02)
         self.value.bias.data.zero_()   
     
     def transpose_for_scores(self, x):
@@ -112,31 +106,34 @@ class BertSelfOutput(nn.Module):
     def __init__(self, hidden_size, layer_norm_eps=1e-12, dropout_p=0.1):
         super().__init__()
         self.dense = nn.Linear(hidden_size, hidden_size)
-        self.layer_norm = nn.LayerNorm(hidden_size, layer_norm_eps)
         self.dropout = nn.Dropout(dropout_p)
+        self.layer_norm = nn.LayerNorm(hidden_size, eps=layer_norm_eps)
 
         self._init_weight()
 
     def _init_weight(self):
-        nn.init.kaiming_uniform_(self.dense.weight, mode='fan_out', nonlinearity='relu')
-        # self.dense.weight.data.normal_(mean=0.0, std=0.02)
+        nn.init.normal_(self.dense.weight,mean=0.0, std=0.02)
         self.dense.bias.data.zero_()
-        self.layer_norm.bias.data.zero_()
-        self.layer_norm.weight.data.fill_(1.0)
 
-    def forward(self, h_state, input_tensor):
+    def forward(self, h_state):
         """
         h_state: output of BertSelfAttention, (batch_size, seq_len, hidden_size)
-        input_tensor: output of BertEmbedding, (batch_size, seq_len, hidden_size)
         """
-        return self.layer_norm(self.dropout(self.dense(h_state)) + input_tensor) # (batch_size, seq_len, hidden_size)
+        return self.dropout(self.dense(h_state)) # (batch_size, seq_len, hidden_size)
 
 
 class BertAttention(nn.Module):
     def __init__(self, hidden_size, n_heads=2, layer_norm_eps=1e-12, dropout_p=0.1):
         super().__init__()
+        self.layer_norm = nn.LayerNorm(hidden_size, eps=layer_norm_eps)
         self.selfattn = BertSelfAttention(hidden_size, n_heads, dropout_p)
         self.output = BertSelfOutput(hidden_size, layer_norm_eps, dropout_p)
+
+        self._init_weight()
+
+    def _init_weight(self):
+        self.layer_norm.weight.data.fill_(1.0)
+        self.layer_norm.bias.data.zero_()
 
     def forward(self, h_states, attention_mask):
         """
@@ -144,44 +141,43 @@ class BertAttention(nn.Module):
         attention_mask = (batch_size, seq_len)
         enc_h_states = (batch_size, seq_len, hidden_size). If None, we get self-attention
         """
-        self_out = self.selfattn(h_states, attention_mask)
-        attn_output = self.output(self_out, h_states)
-        return attn_output  # (batch_size, seq_len, hidden_size)
+        self_out = self.selfattn(self.layer_norm(h_states), attention_mask)
+        return self.output(self_out) + h_states  # (batch_size, seq_len, hidden_size)
 
 
 class FFNN(nn.Module):
     def __init__(self, hidden_size, d_ff, layer_norm_eps=1e-12, dropout_p=0.1):
         super().__init__()
+        self.layer_norm = nn.LayerNorm(hidden_size, eps=layer_norm_eps)
         self.ffnn1 = nn.Linear(hidden_size, d_ff)
         self.ffnn2 = nn.Linear(d_ff, hidden_size)
 
         self.gelu = nn.functional.gelu
-        self.layer_norm = nn.LayerNorm(hidden_size, layer_norm_eps)
         self.dropout = nn.Dropout(dropout_p)
 
         self._init_weight()
     
     def _init_weight(self):
-        nn.init.kaiming_uniform_(self.ffnn1.weight, mode='fan_out', nonlinearity='relu')
-        # self.ffnn1.weight.data.uniform_(mean=0.0, std=0.02)
+        nn.init.normal_(self.ffnn1.weight, mean=0.0, std=0.02)
         self.ffnn1.bias.data.zero_()
-        nn.init.kaiming_uniform_(self.ffnn2.weight, mode='fan_out', nonlinearity='relu')
-        # self.ffnn2.weight.data.uniform_(mean=0.0, std=0.02)
+        nn.init.normal_(self.ffnn2.weight, mean=0.0, std=0.02)
         self.ffnn2.bias.data.zero_()
-        self.layer_norm.bias.data.zero_()
         self.layer_norm.weight.data.fill_(1.0)
+        self.layer_norm.bias.data.zero_()
+
 
     def forward(self, h_states):
         """
         h_states = (batch_size, seq_len, hidden_size)
         """
-        next = self.gelu(self.ffnn1(h_states))
-        return self.layer_norm(self.dropout(self.ffnn2(next)) + h_states)  #(batch_size, seq_len, hidden_size)
+        next = self.gelu(self.ffnn1(self.layer_norm(h_states)))
+        return self.dropout(self.ffnn2(next)) + h_states  #(batch_size, seq_len, hidden_size)
 
 class BertLayer(nn.Module):
     def __init__(self, hidden_size, d_ff, n_heads=2, layer_norm_eps=1e-12, dropout_p=0.1):
         super().__init__()
         self.attn = BertAttention(hidden_size, n_heads, layer_norm_eps, dropout_p)
+        self.cross_attention = BertAttention(hidden_size, n_heads, layer_norm_eps, dropout_p)
         self.ffnn = FFNN(hidden_size, d_ff, layer_norm_eps, dropout_p)
 
     def forward(self, h_states, attention_mask):
@@ -195,6 +191,7 @@ class BertLayer(nn.Module):
         return ffnn_output  # (batch_size, seq_len, hidden_size)
 
 
+
 class BertEncoder(nn.Module):
     def __init__(self,  hidden_size, d_ff, n_layers=2, n_heads=2, layer_norm_eps=1e-12, dropout_p=0.1):
         super().__init__()
@@ -203,7 +200,7 @@ class BertEncoder(nn.Module):
     def forward(self, h_states, attention_mask):
         for layer in self.layers:
             h_states = layer(h_states, attention_mask)
-        
+
         return h_states
 
 class BertPooler(nn.Module):
@@ -214,8 +211,7 @@ class BertPooler(nn.Module):
         self._init_weight()
 
     def _init_weight(self):
-        nn.init.kaiming_uniform_(self.dense.weight, mode='fan_out', nonlinearity='relu')
-        # self.dense.weight.data.uniform_(mean=0.0, std=0.02)
+        nn.init.normal_(self.dense.weight,mean=0.0, std=0.02)
         self.dense.bias.data.zero_()
     
     def forward(self, h_states):

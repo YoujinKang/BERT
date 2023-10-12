@@ -53,7 +53,7 @@ if __name__ == '__main__':
     print(conf.values)
     updates = {"model": { 
                     "hidden_size": 128,
-                    "vocab_size": 30000,
+                    "vocab_size": 30522,
                     "d_ff": 64,
                     "n_layers": 2, 
                     "n_heads": 2,
@@ -71,7 +71,12 @@ if __name__ == '__main__':
                     "eval_interval": 10000,  
                     "weight_decay": 0.01,
                     "lr": 1e-04,
-                    "smoothing": 0.1}}
+                    "smoothing": 0.1},
+                "fine_tuning": {
+                    "batch_size": 16, 
+                    "max_epoch": 2,
+                    "lr": 2e-5,
+                    "eval_interval": 100}}
     conf.update(updates)
     print(conf.values)
     conf.export('config/config.json')
@@ -80,7 +85,7 @@ if __name__ == '__main__':
     print(conf.values)
     updates = {"model": { \
                     "hidden_size": 6,
-                    "vocab_size": 30000,
+                    "vocab_size": 30522,
                     "d_ff": 3,
                     "n_layers": 2, 
                     "n_heads": 2,
@@ -98,7 +103,12 @@ if __name__ == '__main__':
                     "eval_interval": 5,  
                     "weight_decay": 0.01,
                     "lr": 1e-04,
-                    "smoothing": 0.1}}
+                    "smoothing": 0.1},
+                "fine_tuning": {
+                    "batch_size": 16, 
+                    "max_epoch": 2,
+                    "lr": 2e-5,
+                    "eval_interval": 100}}
     conf.update(updates)
     print(conf.values)
     conf.export('config/config_test.json')

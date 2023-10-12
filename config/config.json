@@ -11,14 +11,21 @@
         "dropout_p": 0.1
     },
     "train": {
-        "batch_size": 30,
+        "batch_size": 64,
         "step_batch": 4,
-        "max_epoch": 50,
+        "max_epoch": 100,
         "beta1": 0.9,
         "beta2": 0.999,
         "warmup": 4000,
         "eval_interval": 10000,
         "weight_decay": 0.01,
-        "lr": 0.0001
+        "lr": 0.0001,
+        "smoothing": 0.1
+    },
+    "fine_tuning": {
+        "batch_size": 16,
+        "max_epoch": 4,
+        "lr": 3e-4,
+        "eval_interval": 100
     }
 }

@@ -9,7 +9,7 @@ from transformers import BertTokenizerFast, data
 tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
 data_col = data.data_collator.DataCollatorForLanguageModeling(tokenizer)
 
-# using sentencepiece
+
 class LMDataset(Dataset):
     def __init__(self, data, vocab, sep_token, cls_token, mask_token, pad_token, 
                 seq_len=512, mask_frac=0.15, nsp_prob=0.5):
@@ -117,7 +117,6 @@ def load_dataset(train_file, valid_file):
     return train, valid
 
 
-# using huggingface tokenizer (much faster)
 class CustomDataset(Dataset):
     def __init__(self, data, max_len):
         self.data = data

@@ -17,7 +17,7 @@ class BertModel(nn.Module):
         pooled_out: 각 배치 내 cls 토큰의 의미 가짐
         """
         embedding_out = self.embedding(input_ids, token_type_ids)
-        seq_out = self.encoder(embedding_out, attention_mask)
-        pooled_out = self.pooler(seq_out)
+        enc_out = self.encoder(embedding_out, attention_mask)
+        pooled_out = self.pooler(enc_out)
 
-        return (seq_out, pooled_out)
+        return (enc_out, pooled_out) 
